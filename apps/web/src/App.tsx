@@ -1,36 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import type { HealthResponse } from "shared-types";
-
-async function fetchHealth(): Promise<HealthResponse> {
-  const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
-  const response = await fetch(`${apiUrl}/health`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch API health status");
-  }
-
-  return response.json() as Promise<HealthResponse>;
-}
+import { AppRoutes } from "./routes/AppRoutes";
+import { MainNav } from "./components/MainNav";
 
 export function App() {
-  const healthQuery = useQuery({
-    queryKey: ["health"],
-    queryFn: fetchHealth,
-  });
-
   return (
     <main className="container">
-      <h1>Monorepo starter</h1>
-      <p>React + TanStack Query + Node.js API + shared TypeScript types.</p>
-
-      <section className="card">
-        <h2>API health</h2>
-        {healthQuery.isLoading && <p>Loading...</p>}
-        {healthQuery.isError && <p>Failed to connect to API.</p>}
-        {healthQuery.data && (
-          <pre>{JSON.stringify(healthQuery.data, null, 2)}</pre>
-        )}
-      </section>
+      <MainNav />
+      <AppRoutes />
     </main>
   );
 }

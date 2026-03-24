@@ -3,3 +3,12 @@ export interface HealthResponse {
   service: string;
   timestamp: string;
 }
+
+export interface Cs2Match {
+  id: string;
+  name: string;
+}
+
+export interface Cs2MatchesResponse {
+  matches: Cs2Match[];
+}

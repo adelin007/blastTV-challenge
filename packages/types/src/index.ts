@@ -7,6 +7,8 @@ export interface HealthResponse {
 export interface Cs2Match {
   id: string;
   name: string;
+  map: string;
+  teams: string[];
 }
 
 export interface Cs2MatchesResponse {

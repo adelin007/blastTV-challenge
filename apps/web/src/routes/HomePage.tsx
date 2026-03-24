@@ -64,10 +64,30 @@ export function HomePage() {
           </select>
 
           {selectedMatch && (
-            <p className="mt-2 text-sm text-slate-600">
-              Selected match id:{" "}
-              <span className="font-mono">{selectedMatch.id}</span>
-            </p>
+            <div>
+              <p className="mt-2 text-sm text-slate-600">
+                Selected match:{" "}
+                <span className="font-mono">{selectedMatch.name}</span>
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                Map: <span className="font-mono">{selectedMatch.map}</span>
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                Teams:{" "}
+                <span className="font-mono">
+                  {selectedMatch.teams.join(" vs ")}
+                </span>
+              </p>
+            </div>
+          )}
+
+          {!selectedMatch && selectedMatchId && (
+            <div className="mt-4 rounded-md bg-yellow-50 p-3">
+              <p className="text-sm text-yellow-700">
+                Match with id{" "}
+                <span className="font-mono">{selectedMatchId}</span> not found.
+              </p>
+            </div>
           )}
         </div>
       )}

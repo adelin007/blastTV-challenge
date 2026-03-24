@@ -19,12 +19,18 @@ export function HealthPage() {
   });
 
   return (
-    <section className="card">
-      <h2>API health</h2>
-      {healthQuery.isLoading && <p>Loading...</p>}
-      {healthQuery.isError && <p>Failed to connect to API.</p>}
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-xl font-semibold">API health</h2>
+      {healthQuery.isLoading && (
+        <p className="mt-2 text-slate-700">Loading...</p>
+      )}
+      {healthQuery.isError && (
+        <p className="mt-2 text-red-600">Failed to connect to API.</p>
+      )}
       {healthQuery.data && (
-        <pre>{JSON.stringify(healthQuery.data, null, 2)}</pre>
+        <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-slate-200">
+          {JSON.stringify(healthQuery.data, null, 2)}
+        </pre>
       )}
     </section>
   );

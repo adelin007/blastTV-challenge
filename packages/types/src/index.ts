@@ -18,6 +18,7 @@ export interface Cs2Match {
   id: string;
   name: string;
   map: string;
+  mapCoverUrl?: string | null;
   teams: Team[];
 }
 

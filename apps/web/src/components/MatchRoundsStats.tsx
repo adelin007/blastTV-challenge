@@ -28,8 +28,6 @@ export const MatchRoundsStats = () => {
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <h3 className="text-sm font-semibold text-slate-900">Rounds</h3>
-
       {isLoading && (
         <p className="mt-2 text-sm text-slate-600">Loading rounds...</p>
       )}

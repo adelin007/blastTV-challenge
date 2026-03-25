@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { Cs2MatchesResponse, HealthResponse, Player } from "shared-types";
 import { matchAnalytics } from "./matchAnalytics";
+import { getMapImageUrl } from "./utils/maps";
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -153,6 +154,7 @@ app.get("/matches", (_req, res) => {
       id: match.id,
       name: match.name,
       map: match.map ?? "unknown",
+      mapCoverUrl: match.map ? getMapImageUrl(match.map) : null,
       teams: [
         {
           name: match.teams.ct ?? "unknown",
@@ -185,19 +187,6 @@ app.get("/matches/:id/round-scores", (req, res) => {
   res.json({
     matchId: match.id,
     roundScores: matchAnalytics.getRoundScores(match),
-  });
-});
-
-app.get("/matches/:id/player-stats", (req, res) => {
-  const match = getMatchById(req.params.id);
-  if (!match) {
-    res.status(404).json({ error: "Match not found" });
-    return;
-  }
-
-  res.json({
-    matchId: match.id,
-    playerStats: matchAnalytics.getPlayerStats(match),
   });
 });
 

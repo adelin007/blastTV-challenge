@@ -67,8 +67,7 @@ const MatchResultsHeader = () => {
         <div
           className="rounded-lg"
           style={{
-            backgroundImage:
-              'linear-gradient(rgba(248, 250, 252, 0.59), rgba(248, 250, 252, 0.78)), url("https://static.csstats.gg/images/maps/screenshots/cs2/de_nuke_1_png.jpg")',
+            backgroundImage: `linear-gradient(rgba(248, 250, 252, 0.59), rgba(248, 250, 252, 0.78)), url("${selectedMatch.mapCoverUrl ?? ""}")`,
           }}
         >
           <p className="mt-2 ml-2 text-sm text-slate-600">

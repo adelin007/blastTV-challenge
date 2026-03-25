@@ -28,18 +28,6 @@ export async function fetchRoundScores(
   return response.json() as Promise<MatchRoundScoresResponse>;
 }
 
-export async function fetchPlayerStats(
-  matchId: string,
-): Promise<MatchPlayerStatsResponse> {
-  const response = await fetch(`${apiUrl}/matches/${matchId}/player-stats`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch player stats");
-  }
-
-  return response.json() as Promise<MatchPlayerStatsResponse>;
-}
-
 export async function fetchMatchInsights(
   matchId: string,
 ): Promise<MatchInsights> {

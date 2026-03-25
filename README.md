@@ -21,6 +21,12 @@ yarn install
 yarn run dev
 ```
 
+Types:
+
+```bash
+yarn workspace shared-types build
+```
+
 - Web: `http://localhost:5173`
 - API: `http://localhost:4000`
 

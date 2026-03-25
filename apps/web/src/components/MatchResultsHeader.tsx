@@ -71,27 +71,12 @@ const MatchResultsHeader = () => {
               'linear-gradient(rgba(248, 250, 252, 0.59), rgba(248, 250, 252, 0.78)), url("https://static.csstats.gg/images/maps/screenshots/cs2/de_nuke_1_png.jpg")',
           }}
         >
-          {/* <p className="mt-2 text-sm text-slate-600">
-            <span className="font-mono">{selectedMatch.name}</span>
-          </p> */}
           <p className="mt-2 ml-2 text-sm text-slate-600">
             Map: <span className="font-mono">{selectedMatch.map}</span>
           </p>
-          {/* <p className="mt-2 text-sm text-slate-600">
-            Teams:{" "}
-            <span className="font-mono">
-              {selectedMatch.teams.map((team) => team.name).join(" vs ")}
-            </span>
-          </p> */}
 
           {matchInsights && (
-            <div
-              className="mt-4 rounded-lg p-3 flex"
-              // style={{
-              //   backgroundImage:
-              //     'linear-gradient(rgba(248, 250, 252, 0.59), rgba(248, 250, 252, 0.68)), url("https://static.csstats.gg/images/maps/screenshots/cs2/de_nuke_1_png.jpg")',
-              // }}
-            >
+            <div className="mt-4 rounded-lg p-3 flex">
               <div className="flex-1 justify-items-center content-center">
                 <p className="text-sm text-slate-700">
                   <span className="font-mono text-green-700 text-2xl">
@@ -122,24 +107,6 @@ const MatchResultsHeader = () => {
               </div>
             </div>
           )}
-
-          {/* <div className="mt-2 space-y-2">
-            {selectedMatch.teams.map((team) => (
-              <div
-                key={team.name}
-                className="rounded border border-slate-200 bg-slate-50 p-2"
-              >
-                <p className="text-sm font-medium text-slate-700">
-                  {team.name}
-                </p>
-                <p className="mt-1 text-xs text-slate-600">
-                  Players:{" "}
-                  {team.players.map((player) => player.name).join(", ") ||
-                    "unknown"}
-                </p>
-              </div>
-            ))}
-          </div> */}
         </div>
       )}
     </div>

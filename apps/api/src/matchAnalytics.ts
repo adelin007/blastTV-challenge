@@ -29,10 +29,17 @@ const CT_SCORE_REGEX = /Team "CT" scored "(\d+)" with "\d+" players/;
 const T_SCORE_REGEX = /Team "TERRORIST" scored "(\d+)" with "\d+" players/;
 const KILL_REGEX =
   /"(.+?)<\d+><([^>]*)><([^>]*)>".* killed "(.+?)<\d+><([^>]*)><([^>]*)>".* with "([^"]+)"(.*)$/;
+const TEAM_SWITCH_REGEX =
+  /"(.+?)<\d+><([^>]*)>" switched from team <[^>]*> to <(CT|TERRORIST)>/;
+const ROUND_START_REGEX = /World triggered "Round_Start"/;
+const ROUND_END_NOTICE_REGEX =
+  /Team "(CT|TERRORIST)" triggered "(SFUI_Notice_[^"]+)"/;
+const BOMB_PLANTED_REGEX = /triggered "Planted_The_Bomb"/;
 
 const CT_SIDE = "CT";
 const TERRORIST_SIDE = "TERRORIST";
 type Side = typeof CT_SIDE | typeof TERRORIST_SIDE;
+const DEFAULT_PLAYERS_PER_TEAM = 5;
 
 function isLikelyPlayer(name: string) {
   return name.length > 0 && name !== "World";
@@ -85,7 +92,86 @@ export function getRoundScores(match: MatchLogSource): RoundScore[] {
   let previousCtScore = 0;
   let previousTerroristScore = 0;
 
+  const currentCtPlayers = new Set<string>();
+  const currentTerroristPlayers = new Set<string>();
+  let aliveCtPlayers = new Set<string>();
+  let aliveTerroristPlayers = new Set<string>();
+  let roundEndReason: RoundScore["roundEndReason"] = "unknown";
+  let bombPlantedThisRound = false;
+
+  const startRoundAliveTracking = () => {
+    aliveCtPlayers = new Set(currentCtPlayers);
+    aliveTerroristPlayers = new Set(currentTerroristPlayers);
+  };
+
+  const getAliveCounts = () => ({
+    ct:
+      aliveCtPlayers.size > 0
+        ? aliveCtPlayers.size
+        : currentCtPlayers.size > 0
+          ? currentCtPlayers.size
+          : DEFAULT_PLAYERS_PER_TEAM,
+    terrorist:
+      aliveTerroristPlayers.size > 0
+        ? aliveTerroristPlayers.size
+        : currentTerroristPlayers.size > 0
+          ? currentTerroristPlayers.size
+          : DEFAULT_PLAYERS_PER_TEAM,
+  });
+
   for (const line of match.logLines) {
+    const switchMatch = line.match(TEAM_SWITCH_REGEX);
+    if (switchMatch) {
+      const playerName = switchMatch[1].trim();
+      const playerId = getStablePlayerId(switchMatch[2], playerName);
+      const side = switchMatch[3] as Side;
+
+      currentCtPlayers.delete(playerId);
+      currentTerroristPlayers.delete(playerId);
+
+      if (side === CT_SIDE) {
+        currentCtPlayers.add(playerId);
+      } else {
+        currentTerroristPlayers.add(playerId);
+      }
+    }
+
+    if (ROUND_START_REGEX.test(line)) {
+      startRoundAliveTracking();
+      roundEndReason = "unknown";
+      bombPlantedThisRound = false;
+    }
+
+    if (BOMB_PLANTED_REGEX.test(line)) {
+      bombPlantedThisRound = true;
+    }
+
+    const killMatch = line.match(KILL_REGEX);
+    if (killMatch) {
+      const victimName = killMatch[4].trim();
+      const victimId = getStablePlayerId(killMatch[5], victimName);
+      const victimSide = getSide(killMatch[6].trim());
+
+      if (victimSide === CT_SIDE) {
+        aliveCtPlayers.delete(victimId);
+      }
+
+      if (victimSide === TERRORIST_SIDE) {
+        aliveTerroristPlayers.delete(victimId);
+      }
+    }
+
+    const roundEndNoticeMatch = line.match(ROUND_END_NOTICE_REGEX);
+    if (roundEndNoticeMatch) {
+      const notice = roundEndNoticeMatch[2];
+
+      if (notice.includes("Bomb_Defused")) {
+        roundEndReason = "bomb_defused";
+      } else if (notice.includes("Target_Bombed")) {
+        roundEndReason = "bomb_exploded";
+      }
+    }
+
     const ctMatch = line.match(CT_SCORE_REGEX);
     if (ctMatch) {
       pendingCtScore = Number(ctMatch[1]);
@@ -117,6 +203,16 @@ export function getRoundScores(match: MatchLogSource): RoundScore[] {
             ? terroristTeamName
             : null;
 
+      const aliveCounts = getAliveCounts();
+      const effectiveRoundEndReason: RoundScore["roundEndReason"] =
+        roundEndReason !== "unknown"
+          ? roundEndReason
+          : aliveCounts.ct === 0 || aliveCounts.terrorist === 0
+            ? "elimination"
+            : winner === "CT" && !bombPlantedThisRound
+              ? "time_ran_out"
+              : "unknown";
+
       rounds.push({
         round,
         ctScore: pendingCtScore,
@@ -125,12 +221,17 @@ export function getRoundScores(match: MatchLogSource): RoundScore[] {
         ctTeamName,
         terroristTeamName,
         winnerTeamName,
+        roundEndReason: effectiveRoundEndReason,
+        ctPlayersAlive: aliveCounts.ct,
+        terroristPlayersAlive: aliveCounts.terrorist,
       });
 
       previousCtScore = pendingCtScore;
       previousTerroristScore = pendingTerroristScore;
       pendingCtScore = null;
       pendingTerroristScore = null;
+      roundEndReason = "unknown";
+      bombPlantedThisRound = false;
     }
   }
 

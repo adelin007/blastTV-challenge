@@ -33,6 +33,14 @@ export interface RoundScore {
   ctTeamName: string | null;
   terroristTeamName: string | null;
   winnerTeamName: string | null;
+  roundEndReason:
+    | "bomb_defused"
+    | "bomb_exploded"
+    | "elimination"
+    | "time_ran_out"
+    | "unknown";
+  ctPlayersAlive: number;
+  terroristPlayersAlive: number;
 }
 
 export interface PlayerStats {

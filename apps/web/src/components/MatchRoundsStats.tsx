@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Skull } from "lucide-react";
+import { Skull, Bomb, Clock, CircleQuestionMark } from "lucide-react";
 import { UserRound } from "lucide-react";
 import { fetchMatchInsights, fetchRoundScores } from "../api/queries";
 import { useApplicationContext } from "../contexts/ApplicationContext";
 import { RoundScore } from "shared-types";
+import { DEFAULT_PLAYERS_PER_TEAM } from "../constants/general";
 
 export const MatchRoundsStats = () => {
   const { selectedMatchId } = useApplicationContext();
@@ -17,11 +18,7 @@ export const MatchRoundsStats = () => {
     enabled: Boolean(selectedMatchId),
   });
 
-  const {
-    data: matchInsights,
-    isLoading: isMatchInsightsLoading,
-    isError: isMatchInsightsError,
-  } = useQuery({
+  const { data: matchInsights } = useQuery({
     queryKey: ["match-insights", selectedMatchId],
     queryFn: () => fetchMatchInsights(selectedMatchId),
     enabled: Boolean(selectedMatchId),
@@ -56,21 +53,21 @@ export const MatchRoundsStats = () => {
                   </div>
                   <div className="flex">
                     <div className="flex">
-                      <div className="flex items-center mr-4">
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-green-700" />
-                        <UserRound className="h-6 w-6 text-green-700" />
-                      </div>
-                      <div className="flex">
+                      <RoundPlayersItem
+                        overallWinnerTeam={overallWinnerTeam}
+                        roundItem={roundItem}
+                        overallOutcome="winning"
+                      />
+                      <div className="flex items-center justify-center content-center">
                         <RoundScoreItem
                           overallWinnerTeam={overallWinnerTeam}
                           roundItem={roundItem}
                           overallOutcome="winning"
                         />
-                        <div className="flex flex-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-green-700">
-                          <Skull className="h-10 w-10 text-gray-300" />
+                        <div className="flex w-[100px] rounded-full items-center justify-center border border-slate-200 bg-white px-3 py-2 text-sm text-green-700">
+                          <RoundEndReasonIcon
+                            roundEndReason={roundItem.roundEndReason}
+                          />
                         </div>
                         <RoundScoreItem
                           overallWinnerTeam={overallWinnerTeam}
@@ -79,17 +76,12 @@ export const MatchRoundsStats = () => {
                         />
                       </div>
 
-                      <div className="flex items-center ml-4">
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-gray-300" />
-                        <UserRound className="h-6 w-6 text-green-700" />
-                      </div>
+                      <RoundPlayersItem
+                        overallWinnerTeam={overallWinnerTeam}
+                        roundItem={roundItem}
+                        overallOutcome="losing"
+                      />
                     </div>
-
-                    <div></div>
-                    <div></div>
                   </div>
                 </div>
               </div>
@@ -156,7 +148,7 @@ const RoundScoreItem = ({
 
   return (
     <div
-      className={`flex w-12 items-center justify-center border border-slate-200 rounded ${
+      className={`flex w-12 h-12 items-center justify-center border border-slate-200 rounded ${
         overallOutcome === "winning" ? "mr-2" : "ml-2"
       }`}
       style={
@@ -174,4 +166,119 @@ const RoundScoreItem = ({
       <p className="">{score}</p>
     </div>
   );
+};
+
+interface RoundPlayersItemProps {
+  roundItem: Pick<
+    RoundScore,
+    | "ctScore"
+    | "terroristScore"
+    | "ctTeamName"
+    | "winnerTeamName"
+    | "winner"
+    | "ctPlayersAlive"
+    | "terroristPlayersAlive"
+  >;
+  overallWinnerTeam: string | null | undefined;
+  overallOutcome: "winning" | "losing";
+}
+const RoundPlayersItem = ({
+  roundItem,
+  overallWinnerTeam,
+  overallOutcome,
+}: RoundPlayersItemProps) => {
+  const isRoundWinnerOverallWinner =
+    roundItem.winnerTeamName === overallWinnerTeam;
+
+  const isRoundWinnerCT = roundItem.winner === "CT";
+
+  const getPlayersAlive = () => {
+    if (overallOutcome === "winning") {
+      if (isRoundWinnerOverallWinner) {
+        return isRoundWinnerCT
+          ? roundItem.ctPlayersAlive
+          : roundItem.terroristPlayersAlive;
+      } else {
+        return !isRoundWinnerCT
+          ? roundItem.ctPlayersAlive
+          : roundItem.terroristPlayersAlive;
+      }
+    } else {
+      if (isRoundWinnerOverallWinner) {
+        return !isRoundWinnerCT
+          ? roundItem.ctPlayersAlive
+          : roundItem.terroristPlayersAlive;
+      } else {
+        return isRoundWinnerCT
+          ? roundItem.ctPlayersAlive
+          : roundItem.terroristPlayersAlive;
+      }
+    }
+  };
+
+  const playersAlive = getPlayersAlive();
+
+  return (
+    <div
+      className={`flex items-center ${overallOutcome === "winning" ? "mr-4" : "ml-4"}`}
+    >
+      {Array.from({ length: DEFAULT_PLAYERS_PER_TEAM }).map((_, index) => {
+        if (index < playersAlive) {
+          return <UserRound key={index} className={`h-6 w-6 text-green-700`} />;
+        } else {
+          return <UserRound key={index} className={`h-6 w-6 text-gray-300`} />;
+        }
+      })}
+    </div>
+  );
+};
+
+export const RoundEndReasonIcon = ({
+  roundEndReason,
+}: {
+  roundEndReason: RoundScore["roundEndReason"];
+}) => {
+  switch (roundEndReason) {
+    case "bomb_defused":
+      return (
+        <div className="flex flex-col items-center">
+          <Bomb className="h-6 w-6 text-gray-300" />
+          <span className="text-xs text-gray-500 text-center">
+            Bomb defused
+          </span>
+        </div>
+      );
+    case "bomb_exploded":
+      return (
+        <div className="flex flex-col items-center">
+          <Bomb className="h-6 w-6 text-gray-300" />
+          <span className="text-xs text-gray-500 text-center">
+            Bomb exploded
+          </span>
+        </div>
+      );
+    case "elimination":
+      return (
+        <div className="flex flex-col items-center">
+          <Skull className="h-6 w-6 text-gray-300" />
+          <span className="text-xs text-gray-500">Elimination</span>
+        </div>
+      );
+    case "time_ran_out":
+      return (
+        <div className="flex flex-col items-center">
+          <Clock className="h-6 w-6 text-gray-300" />
+          <span className="text-xs text-gray-500 text-center">
+            Time ran out
+          </span>
+        </div>
+      );
+    default:
+      return (
+        <div className="flex flex-col items-center">
+          <CircleQuestionMark className="h-6 w-6 text-gray-300" />
+          <span className="text-xs text-gray-500">Unknown</span>
+        </div>
+      );
+  }
 };

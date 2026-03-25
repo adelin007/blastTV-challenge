@@ -23,12 +23,6 @@ const MatchResultsHeader = () => {
     queryFn: fetchCs2Matches,
   });
 
-  const roundScoresQuery = useQuery({
-    queryKey: ["round-scores", selectedMatchId],
-    queryFn: () => fetchRoundScores(selectedMatchId),
-    enabled: Boolean(selectedMatchId),
-  });
-
   const { data: matchInsights } = useQuery({
     queryKey: ["match-insights", selectedMatchId],
     queryFn: () => fetchMatchInsights(selectedMatchId),
@@ -40,7 +34,7 @@ const MatchResultsHeader = () => {
   );
 
   return (
-    <div className="mb-4">
+    <div className="mb-4 rounded-xl bg-cover bg-center bg-no-repeat p-4">
       {isLoading && <p className="mt-4 text-slate-700">Loading matches...</p>}
 
       {isError && <p className="mt-4 text-red-600">Failed to load matches.</p>}
@@ -70,23 +64,34 @@ const MatchResultsHeader = () => {
       )}
 
       {selectedMatch && (
-        <div>
-          <p className="mt-2 text-sm text-slate-600">
-            Selected match:{" "}
+        <div
+          className="rounded-lg"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(248, 250, 252, 0.59), rgba(248, 250, 252, 0.78)), url("https://static.csstats.gg/images/maps/screenshots/cs2/de_nuke_1_png.jpg")',
+          }}
+        >
+          {/* <p className="mt-2 text-sm text-slate-600">
             <span className="font-mono">{selectedMatch.name}</span>
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
+          </p> */}
+          <p className="mt-2 ml-2 text-sm text-slate-600">
             Map: <span className="font-mono">{selectedMatch.map}</span>
           </p>
-          <p className="mt-2 text-sm text-slate-600">
+          {/* <p className="mt-2 text-sm text-slate-600">
             Teams:{" "}
             <span className="font-mono">
               {selectedMatch.teams.map((team) => team.name).join(" vs ")}
             </span>
-          </p>
+          </p> */}
 
           {matchInsights && (
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 flex">
+            <div
+              className="mt-4 rounded-lg p-3 flex"
+              // style={{
+              //   backgroundImage:
+              //     'linear-gradient(rgba(248, 250, 252, 0.59), rgba(248, 250, 252, 0.68)), url("https://static.csstats.gg/images/maps/screenshots/cs2/de_nuke_1_png.jpg")',
+              // }}
+            >
               <div className="flex-1 justify-items-center content-center">
                 <p className="text-sm text-slate-700">
                   <span className="font-mono text-green-700 text-2xl">

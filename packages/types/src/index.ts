@@ -38,9 +38,11 @@ export interface RoundScore {
 export interface PlayerStats {
   playerId: string;
   player: string;
+  teamName: string;
   kills: number;
   deaths: number;
   headshots: number;
+  hsPercentage: number;
   kdRatio: number;
 }
 
@@ -53,11 +55,18 @@ export interface MatchInsights {
   matchId: string;
   roundScores: RoundScore[];
   playerStats: PlayerStats[];
+  playerStatsByTeam: TeamPlayerStatsGroup[];
   totalRounds: number;
   winnerTeamName: string | null;
   loserTeamName: string | null;
   winnerScore: number;
   loserScore: number;
+}
+
+export interface TeamPlayerStatsGroup {
+  teamName: string;
+  isWinner: boolean;
+  players: PlayerStats[];
 }
 
 export interface MatchPlayerStatsResponse {

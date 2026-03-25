@@ -1,4 +1,9 @@
-import type { PlayerStats, RoundScore, MatchInsights } from "shared-types";
+import type {
+  PlayerStats,
+  RoundScore,
+  MatchInsights,
+  TeamPlayerStatsGroup,
+} from "shared-types";
 
 export type MatchLogSource = {
   id: string;
@@ -24,6 +29,10 @@ const CT_SCORE_REGEX = /Team "CT" scored "(\d+)" with "\d+" players/;
 const T_SCORE_REGEX = /Team "TERRORIST" scored "(\d+)" with "\d+" players/;
 const KILL_REGEX =
   /"(.+?)<\d+><([^>]*)><([^>]*)>".* killed "(.+?)<\d+><([^>]*)><([^>]*)>".* with "([^"]+)"(.*)$/;
+
+const CT_SIDE = "CT";
+const TERRORIST_SIDE = "TERRORIST";
+type Side = typeof CT_SIDE | typeof TERRORIST_SIDE;
 
 function isLikelyPlayer(name: string) {
   return name.length > 0 && name !== "World";
@@ -54,6 +63,19 @@ function getTeamsForRound(match: MatchLogSource, round: number) {
     ctTeamName: initialT,
     terroristTeamName: initialCt,
   };
+}
+
+function getTeamNameForSide(match: MatchLogSource, round: number, side: Side) {
+  const { ctTeamName, terroristTeamName } = getTeamsForRound(match, round);
+  return side === CT_SIDE ? ctTeamName : terroristTeamName;
+}
+
+function getSide(value: string): Side | null {
+  if (value === CT_SIDE || value === TERRORIST_SIDE) {
+    return value;
+  }
+
+  return null;
 }
 
 export function getRoundScores(match: MatchLogSource): RoundScore[] {
@@ -117,6 +139,7 @@ export function getRoundScores(match: MatchLogSource): RoundScore[] {
 
 export function getPlayerStats(match: MatchLogSource): PlayerStats[] {
   const players = new Map<string, MutablePlayerStats>();
+  const playerTeamCounts = new Map<string, Map<string, number>>();
 
   const ensurePlayer = (playerId: string, name: string): MutablePlayerStats => {
     const existing = players.get(playerId);
@@ -140,7 +163,17 @@ export function getPlayerStats(match: MatchLogSource): PlayerStats[] {
     return created;
   };
 
-  const handleKillLine = (line: string) => {
+  const addTeamObservation = (playerId: string, teamName: string | null) => {
+    if (!teamName) {
+      return;
+    }
+
+    const counts = playerTeamCounts.get(playerId) ?? new Map<string, number>();
+    counts.set(teamName, (counts.get(teamName) ?? 0) + 1);
+    playerTeamCounts.set(playerId, counts);
+  };
+
+  const handleKillLine = (line: string, round: number) => {
     const killMatch = line.match(KILL_REGEX);
     if (!killMatch) {
       return;
@@ -165,6 +198,23 @@ export function getPlayerStats(match: MatchLogSource): PlayerStats[] {
     const killer = ensurePlayer(killerId, killerName);
     const victim = ensurePlayer(victimId, victimName);
 
+    const killerSide = getSide(killerTeam);
+    const victimSide = getSide(victimTeam);
+
+    if (killerSide) {
+      addTeamObservation(
+        killerId,
+        getTeamNameForSide(match, round, killerSide),
+      );
+    }
+
+    if (victimSide) {
+      addTeamObservation(
+        victimId,
+        getTeamNameForSide(match, round, victimSide),
+      );
+    }
+
     killer.kills += 1;
     victim.deaths += 1;
 
@@ -173,11 +223,50 @@ export function getPlayerStats(match: MatchLogSource): PlayerStats[] {
     }
   };
 
-  match.logLines.forEach(handleKillLine);
+  let currentRound = 1;
+  let pendingCtScore: number | null = null;
+  let pendingTerroristScore: number | null = null;
 
-  return [...players.values()]
+  for (const line of match.logLines) {
+    handleKillLine(line, currentRound);
+
+    const ctMatch = line.match(CT_SCORE_REGEX);
+    if (ctMatch) {
+      pendingCtScore = Number(ctMatch[1]);
+    }
+
+    const terroristMatch = line.match(T_SCORE_REGEX);
+    if (terroristMatch) {
+      pendingTerroristScore = Number(terroristMatch[1]);
+    }
+
+    if (pendingCtScore !== null && pendingTerroristScore !== null) {
+      currentRound += 1;
+      pendingCtScore = null;
+      pendingTerroristScore = null;
+    }
+  }
+
+  const playersWithTeams = [...players.values()].map((player) => {
+    const teamCounts = playerTeamCounts.get(player.playerId);
+    const teamName =
+      !teamCounts || teamCounts.size === 0
+        ? "Unknown"
+        : [...teamCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+
+    return {
+      ...player,
+      teamName,
+    };
+  });
+
+  return playersWithTeams
     .map((player) => ({
       ...player,
+      hsPercentage:
+        player.kills === 0
+          ? 0
+          : Number(((player.headshots / player.kills) * 100).toFixed(1)),
       kdRatio:
         player.deaths === 0
           ? player.kills
@@ -200,11 +289,17 @@ export function getMatchInsights(match: MatchLogSource): MatchInsights {
   const playerStats = getPlayerStats(match);
   const winnerTeamName = getOverallWinnerTeam(roundScores);
   const loserTeamName = getOverallLoserTeam(roundScores);
+  const playerStatsByTeam = getPlayerStatsByTeam(
+    playerStats,
+    winnerTeamName,
+    loserTeamName,
+  );
 
   return {
     matchId: match.id,
     roundScores,
     playerStats,
+    playerStatsByTeam,
     totalRounds: roundScores.length,
     winnerTeamName,
     loserTeamName,
@@ -263,6 +358,38 @@ const getOverallLoserScore = (roundScores: RoundScore[]) => {
   }
 
   return Math.min(finalRound.ctScore, finalRound.terroristScore);
+};
+
+const getPlayerStatsByTeam = (
+  playerStats: PlayerStats[],
+  winnerTeamName: string | null,
+  loserTeamName: string | null,
+): TeamPlayerStatsGroup[] => {
+  const groupedByTeam = new Map<string, PlayerStats[]>();
+
+  for (const player of playerStats) {
+    const teamPlayers = groupedByTeam.get(player.teamName) ?? [];
+    teamPlayers.push(player);
+    groupedByTeam.set(player.teamName, teamPlayers);
+  }
+
+  const orderedTeams = [
+    winnerTeamName,
+    loserTeamName,
+    ...groupedByTeam.keys(),
+  ].filter((teamName, index, array): teamName is string => {
+    if (!teamName) {
+      return false;
+    }
+
+    return array.indexOf(teamName) === index;
+  });
+
+  return orderedTeams.map((teamName) => ({
+    teamName,
+    isWinner: teamName === winnerTeamName,
+    players: groupedByTeam.get(teamName) ?? [],
+  }));
 };
 
 export const matchAnalytics = {

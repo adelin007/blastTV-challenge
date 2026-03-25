@@ -209,7 +209,6 @@ app.get("/matches/:id/insights", (req, res) => {
   }
 
   res.json({
-    matchId: match.id,
     ...matchAnalytics.getMatchInsights(match),
   });
 });

@@ -49,6 +49,17 @@ export interface MatchRoundScoresResponse {
   roundScores: RoundScore[];
 }
 
+export interface MatchInsights {
+  matchId: string;
+  roundScores: RoundScore[];
+  playerStats: PlayerStats[];
+  totalRounds: number;
+  winnerTeamName: string | null;
+  loserTeamName: string | null;
+  winnerScore: number;
+  loserScore: number;
+}
+
 export interface MatchPlayerStatsResponse {
   matchId: string;
   playerStats: PlayerStats[];

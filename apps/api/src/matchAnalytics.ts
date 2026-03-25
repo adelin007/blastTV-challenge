@@ -1,4 +1,4 @@
-import type { PlayerStats, RoundScore } from "shared-types";
+import type { PlayerStats, RoundScore, MatchInsights } from "shared-types";
 
 export type MatchLogSource = {
   id: string;
@@ -195,17 +195,75 @@ export function getTopPlayers(match: MatchLogSource, limit = 5): PlayerStats[] {
   return getPlayerStats(match).slice(0, Math.max(0, limit));
 }
 
-export function getMatchInsights(match: MatchLogSource) {
+export function getMatchInsights(match: MatchLogSource): MatchInsights {
   const roundScores = getRoundScores(match);
   const playerStats = getPlayerStats(match);
+  const winnerTeamName = getOverallWinnerTeam(roundScores);
+  const loserTeamName = getOverallLoserTeam(roundScores);
 
   return {
+    matchId: match.id,
     roundScores,
     playerStats,
     totalRounds: roundScores.length,
-    topPlayers: playerStats.slice(0, 5),
+    winnerTeamName,
+    loserTeamName,
+    winnerScore: getOverallWinnerScore(roundScores),
+    loserScore: getOverallLoserScore(roundScores),
   };
 }
+
+const getOverallWinnerTeam = (roundScores: RoundScore[]) => {
+  const finalRound = roundScores.at(-1);
+  if (!finalRound) {
+    return null;
+  }
+
+  if (finalRound.ctScore > finalRound.terroristScore) {
+    return finalRound.ctTeamName ?? null;
+  }
+
+  if (finalRound.terroristScore > finalRound.ctScore) {
+    return finalRound.terroristTeamName ?? null;
+  }
+
+  return null;
+};
+
+const getOverallLoserTeam = (roundScores: RoundScore[]) => {
+  const finalRound = roundScores.at(-1);
+  if (!finalRound) {
+    return null;
+  }
+
+  if (finalRound.ctScore > finalRound.terroristScore) {
+    return finalRound.terroristTeamName ?? null;
+  }
+
+  if (finalRound.terroristScore > finalRound.ctScore) {
+    return finalRound.ctTeamName ?? null;
+  }
+
+  return null;
+};
+
+const getOverallWinnerScore = (roundScores: RoundScore[]) => {
+  const finalRound = roundScores.at(-1);
+  if (!finalRound) {
+    return 0;
+  }
+
+  return Math.max(finalRound.ctScore, finalRound.terroristScore);
+};
+
+const getOverallLoserScore = (roundScores: RoundScore[]) => {
+  const finalRound = roundScores.at(-1);
+  if (!finalRound) {
+    return 0;
+  }
+
+  return Math.min(finalRound.ctScore, finalRound.terroristScore);
+};
 
 export const matchAnalytics = {
   getRoundScores,

@@ -134,7 +134,7 @@ export function getRoundScores(match: MatchLogSource): RoundScore[] {
     }
   }
 
-  return rounds;
+  return rounds.sort((a, b) => a.round - b.round);
 }
 
 export function getPlayerStats(match: MatchLogSource): PlayerStats[] {

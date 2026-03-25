@@ -50,18 +50,6 @@ function parseMatchLog(fileName: string, rawLog: string): ParsedMatch {
   const effectiveLines =
     lastMatchStartIndex >= 0 ? lines.slice(lastMatchStartIndex) : lines;
 
-  const getPlayerId = (rawPlayerId: string, playerName: string) => {
-    const normalized = rawPlayerId.trim();
-    if (normalized && normalized !== "BOT") {
-      return normalized;
-    }
-
-    return `player:${playerName.trim().toLowerCase().replace(/\s+/g, "-")}`;
-  };
-
-  const TEAM_SWITCH_REGEX =
-    /"(.+?)<\d+><([^>]*)>" switched from team <[^>]*> to <(CT|TERRORIST)>/;
-
   for (const line of effectiveLines) {
     const mapMatch = line.match(/World triggered "Match_Start" on "([^"]+)"/);
     if (mapMatch) {
@@ -76,25 +64,6 @@ function parseMatchLog(fileName: string, rawLog: string): ParsedMatch {
     const terroristMatch = line.match(/Team playing "TERRORIST":\s*(.+)$/);
     if (terroristMatch && terroristTeam === null) {
       terroristTeam = terroristMatch[1].trim();
-    }
-
-    const playerSwitchMatch = line.match(TEAM_SWITCH_REGEX);
-    if (playerSwitchMatch) {
-      const playerName = playerSwitchMatch[1].trim();
-      const playerId = getPlayerId(playerSwitchMatch[2], playerName);
-      const side = playerSwitchMatch[3] as "CT" | "TERRORIST";
-      const player: Player = {
-        id: playerId,
-        name: playerName,
-      };
-
-      if (side === "CT") {
-        if (!terroristPlayers.has(playerId)) {
-          ctPlayers.set(playerId, player);
-        }
-      } else if (!ctPlayers.has(playerId)) {
-        terroristPlayers.set(playerId, player);
-      }
     }
   }
 
